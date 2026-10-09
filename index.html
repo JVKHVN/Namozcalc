@@ -88,6 +88,49 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid 
 const P=['Bomdod','Peshin','Asr','Shom','Xufton','Vitr'];
 const MON=['Yanvar','Fevral','Mart','Aprel','May','Iyun','Iyul','Avgust','Sentyabr','Oktyabr','Noyabr','Dekabr'];
 const KEY='qazo_v1';
+const SB_URL='',SB_KEY=''; // Supabase: Project URL va anon key shu yerga yoziladi
+const CLOUD=!!(SB_URL&&SB_KEY);
+let AUTH=null,sync='',pt;try{AUTH=JSON.parse(localStorage.getItem('qazo_auth'))}catch(e){}
+async function sb(path,o={},tk){
+  const h={apikey:SB_KEY,'Content-Type':'application/json',...(o.h||{})};
+  if(tk)h.Authorization='Bearer '+tk;
+  const r=await fetch(SB_URL+path,{method:o.m||'GET',headers:h,body:o.b?JSON.stringify(o.b):undefined});
+  const t=await r.text();let j=null;try{j=JSON.parse(t)}catch(e){}
+  if(!r.ok){let m=(j&&(j.msg||j.error_description||j.message))||('Xato '+r.status);
+    if(/Invalid login/i.test(m))m="Email yoki parol noto'g'ri";else if(/already registered/i.test(m))m="Bu email ro'yxatdan o'tgan, \"Kirish\" ni bosing";else if(/at least 6/i.test(m))m="Parol kamida 6 belgi bo'lsin";
+    throw new Error(m)}
+  return j;
+}
+function setAuth(j){AUTH={at:j.access_token,rt:j.refresh_token,exp:Math.floor(Date.now()/1000)+(j.expires_in||3600),id:j.user.id,email:j.user.email};localStorage.setItem('qazo_auth',JSON.stringify(AUTH))}
+async function tok(){if(AUTH.exp-60<Date.now()/1000){setAuth(await sb('/auth/v1/token?grant_type=refresh_token',{m:'POST',b:{refresh_token:AUTH.rt}}))}return AUTH.at}
+function upd(){const e=document.getElementById('sy');if(e)e.textContent=sync}
+function push(){
+  if(!CLOUD||!AUTH||!S)return;clearTimeout(pt);sync='Saqlanmoqda...';upd();
+  pt=setTimeout(async()=>{try{await sb('/rest/v1/qazo',{m:'POST',h:{Prefer:'resolution=merge-duplicates'},b:{user_id:AUTH.id,data:S,updated_at:new Date().toISOString()}},await tok());sync='Bulutga saqlandi'}catch(e){sync='Bulutga saqlanmadi: '+e.message}upd()},700);
+}
+async function pull(){
+  if(!CLOUD||!AUTH)return;
+  try{const r=await sb('/rest/v1/qazo?select=data',{},await tok());const c=r[0]&&r[0].data;
+    if(c&&(!S||(c.ts||0)>(S.ts||0))){S=c;localStorage.setItem(KEY,JSON.stringify(S));sync='Bulutdan yangilandi'}
+    else if(S&&(!c||(S.ts||0)>(c.ts||0)))push();
+    else sync='Bulut bilan bir xil';
+  }catch(e){sync='Ulanmadi: '+e.message}
+  upd();
+}
+const refresh=()=>pull().then(()=>{if(S&&tab!=='set')render()});
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)refresh()});
+function authView(){return `<h1>Qazo hisobi</h1><p class="sub">Kiring, shunda telefon va kompyuterda bir xil ma'lumot ko'rinadi.</p><div class="card"><label>Email</label><input id="em" type="email" autocomplete="email"><label>Parol (kamida 6 belgi)</label><input id="pw" type="password" autocomplete="current-password"><button class="btn" onclick="authGo('in')">Kirish</button><button class="btn g" onclick="authGo('up')">Ro'yxatdan o'tish</button><p class="hint" id="aerr" style="color:#c0392b"></p></div>`}
+async function authGo(k){
+  const err=m=>document.getElementById('aerr').textContent=m,email=document.getElementById('em').value.trim(),password=document.getElementById('pw').value;
+  if(!email||!password){err('Email va parolni kiriting');return}
+  err('Kutilmoqda...');
+  try{const j=await sb(k==='in'?'/auth/v1/token?grant_type=password':'/auth/v1/signup',{m:'POST',b:{email,password}});
+    if(!j.access_token){err("Emailingizga tasdiqlash xati yuborildi. Tasdiqlab, keyin \"Kirish\" ni bosing.");return}
+    setAuth(j);await pull();render();
+  }catch(e){err(e.message)}
+}
+function logout(){localStorage.removeItem('qazo_auth');localStorage.removeItem(KEY);AUTH=null;S=null;draft={g:'m',age:15};render()}
+async function resetAll(){try{if(CLOUD&&AUTH)await sb('/rest/v1/qazo?user_id=eq.'+AUTH.id,{m:'DELETE'},await tok())}catch(e){}S=null;localStorage.removeItem(KEY);draft={g:'m',age:15};render()}
 let S=null,tab='home',cm=new Date(),sel=null,draft={g:'m',age:15};
 try{S=JSON.parse(localStorage.getItem(KEY))}catch(e){}
 const pad=n=>String(n).padStart(2,'0');
@@ -95,7 +138,7 @@ const fmt=d=>d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
 let today=fmt(new Date());sel=today;
 function tick(){const t=fmt(new Date());if(t===today)return;if(sel===today)sel=t;today=t;cm=new Date();if(S&&tab!=='set')render()}
 setInterval(tick,20000);document.addEventListener('visibilitychange',tick);window.addEventListener('focus',tick);
-function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
+function save(){S.ts=Date.now();try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}push()}
 function calc(g,birth,start,age,haid){
   const b=new Date(birth),s=new Date(start);
   const bal=new Date(b.getFullYear()+age,b.getMonth(),b.getDate());
@@ -188,11 +231,11 @@ function settings(){
   ${e.g==='f'?`<label>Oyiga hayz kunlari</label><input type="number" min="0" max="15" value="${e.haid}" onchange="ed.haid=this.value">`:''}
   <div class="hint">Saqlasangiz qazo soni qayta hisoblanadi. O'qilgan namozlaringiz o'chmaydi.</div>
   <button class="btn" onclick="saveEd()">Saqlash va qayta hisoblash</button></div></div><div class="b">
-  <div class="card"><h2>Zaxira nusxa</h2><p class="hint" style="margin-top:0">Telefonni almashtirsangiz yoki brauzer tozalansa, nusxadan tiklaysiz.</p>
+  ${CLOUD&&AUTH?`<div class="card"><h2>Hisob</h2><p class="hint" style="margin-top:0">${AUTH.email}</p><p class="hint" id="sy">${sync}</p><button class="btn g" onclick="if(confirm('Hisobdan chiqasizmi? Bulutdagi nusxa saqlanib qoladi.'))logout()">Chiqish</button></div>`:''}<div class="card"><h2>Zaxira nusxa</h2><p class="hint" style="margin-top:0">Telefonni almashtirsangiz yoki brauzer tozalansa, nusxadan tiklaysiz.</p>
   <button class="btn g" onclick="exp()">Nusxani yuklab olish</button>
   <button class="btn g" onclick="document.getElementById('f').click()">Nusxadan tiklash</button><input type="file" id="f" accept=".json" hidden onchange="imp(this)"></div>
   <div class="card"><h2>Ko'rinish</h2><div class="seg"><button onclick="theme('light')">Och</button><button onclick="theme('dark')">Qorong'u</button></div></div>
-  <div class="card"><h2>Qaytadan hisoblash</h2><p class="hint" style="margin-top:0">Barcha belgilangan namozlar o'chadi.</p><button class="btn r" onclick="if(confirm('Hamma ma\\'lumot o\\'chiriladi. Davom etasizmi?')){S=null;localStorage.removeItem(KEY);draft={g:'m',age:15};render()}">Hammasini o'chirish</button></div></div></div>`;
+  <div class="card"><h2>Qaytadan hisoblash</h2><p class="hint" style="margin-top:0">Barcha belgilangan namozlar o'chadi.</p><button class="btn r" onclick="if(confirm('Hamma ma\\'lumot o\\'chiriladi. Davom etasizmi?')){resetAll()}">Hammasini o'chirish</button></div></div></div>`;
 }
 function theme(t){document.documentElement.dataset.theme=t;try{localStorage.setItem('qazo_theme',t)}catch(e){}}
 try{const t=localStorage.getItem('qazo_theme');if(t)document.documentElement.dataset.theme=t}catch(e){}
@@ -200,12 +243,13 @@ function exp(){const a=document.createElement('a');a.href=URL.createObjectURL(ne
 function imp(el){const f=el.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{try{const o=JSON.parse(r.result);if(!o.total||!o.log)throw 0;S=o;save();render()}catch(e){alert("Fayl noto'g'ri")}};r.readAsText(f)}
 function render(){
   const app=document.getElementById('app'),nav=document.getElementById('nav');
+  if(CLOUD&&!AUTH){app.innerHTML=authView();nav.style.display='none';return}
   if(!S){app.innerHTML=setup();nav.style.display='none';return}
   nav.style.display='flex';
   app.innerHTML=tab==='home'?home():tab==='cal'?cal():settings();
   nav.innerHTML=[['home','◉','Asosiy'],['cal','▦','Kalendar'],['set','⚙','Sozlamalar']].map(([t,i,l])=>`<button class="${tab===t?'on':''}" onclick="go('${t}')"><b>${i}</b>${l}</button>`).join('');
 }
-render();
+render();refresh();
 </script>
 </body>
 </html>
