@@ -88,7 +88,7 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid 
 const P=['Bomdod','Peshin','Asr','Shom','Xufton','Vitr'];
 const MON=['Yanvar','Fevral','Mart','Aprel','May','Iyun','Iyul','Avgust','Sentyabr','Oktyabr','Noyabr','Dekabr'];
 const KEY='qazo_v1';
-const SB_URL='https://slwmapxvmzzajdjebrcv.supabase.co',SB_KEY=''||(()=>{try{return localStorage.getItem('qazo_sbkey')||''}catch(e){return ''}})(); // Supabase: Project URL va anon key shu yerga yoziladi
+const SB_URL='https://slwmapxvmzzajdjebrcv.supabase.co',SB_KEY='sb_publishable_qU4DE0CE4Q51GA22A8T7aQ_QFpSONQu'; // Supabase: Project URL va anon key shu yerga yoziladi
 const CLOUD=!!(SB_URL&&SB_KEY);
 let AUTH=null,sync='',pt;try{AUTH=JSON.parse(localStorage.getItem('qazo_auth'))}catch(e){}
 async function sb(path,o={},tk){
@@ -97,7 +97,7 @@ async function sb(path,o={},tk){
   const r=await fetch(SB_URL+path,{method:o.m||'GET',headers:h,body:o.b?JSON.stringify(o.b):undefined});
   const t=await r.text();let j=null;try{j=JSON.parse(t)}catch(e){}
   if(!r.ok){let m=(j&&(j.msg||j.error_description||j.message))||('Xato '+r.status);
-    if(/Invalid API key/i.test(m))m="Supabase kaliti noto'g'ri. Pastdagi tugma bilan to'g'ri kalitni kiriting";else if(/Invalid login/i.test(m))m="Email yoki parol noto'g'ri";else if(/already registered/i.test(m))m="Bu email ro'yxatdan o'tgan, \"Kirish\" ni bosing";else if(/at least 6/i.test(m))m="Parol kamida 6 belgi bo'lsin";
+    if(/Invalid API key/i.test(m))m="Ulanishda xatolik: kalit qabul qilinmadi";else if(/Invalid login/i.test(m))m="Email yoki parol noto'g'ri";else if(/already registered/i.test(m))m="Bu email ro'yxatdan o'tgan, \"Kirish\" ni bosing";else if(/at least 6/i.test(m))m="Parol kamida 6 belgi bo'lsin";
     throw new Error(m)}
   return j;
 }
@@ -119,7 +119,7 @@ async function pull(){
 }
 const refresh=()=>pull().then(()=>{if(S&&tab!=='set')render()});
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)refresh()});
-function authView(){return `<h1>Qazo hisobi</h1><p class="sub">Kiring, shunda telefon va kompyuterda bir xil ma'lumot ko'rinadi.</p><div class="card"><label>Email</label><input id="em" type="email" autocomplete="email"><label>Parol (kamida 6 belgi)</label><input id="pw" type="password" autocomplete="current-password"><button class="btn" onclick="authGo('in')">Kirish</button><button class="btn g" onclick="authGo('up')">Ro'yxatdan o'tish</button><p class="hint" id="aerr" style="color:#c0392b"></p><button class="btn g" style="font-size:13px;padding:10px" onclick="askKey()">Supabase kalitini o'zgartirish</button></div>`}
+function authView(){return `<h1>Qazo hisobi</h1><p class="sub">Kiring, shunda telefon va kompyuterda bir xil ma'lumot ko'rinadi.</p><div class="card"><label>Email</label><input id="em" type="email" autocomplete="email"><label>Parol (kamida 6 belgi)</label><input id="pw" type="password" autocomplete="current-password"><button class="btn" onclick="authGo('in')">Kirish</button><button class="btn g" onclick="authGo('up')">Ro'yxatdan o'tish</button><p class="hint" id="aerr" style="color:#c0392b"></p></div>`}
 async function authGo(k){
   const err=m=>document.getElementById('aerr').textContent=m,email=document.getElementById('em').value.trim(),password=document.getElementById('pw').value;
   if(!email||!password){err('Email va parolni kiriting');return}
