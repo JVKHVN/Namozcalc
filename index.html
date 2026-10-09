@@ -88,7 +88,7 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid 
 const P=['Bomdod','Peshin','Asr','Shom','Xufton','Vitr'];
 const MON=['Yanvar','Fevral','Mart','Aprel','May','Iyun','Iyul','Avgust','Sentyabr','Oktyabr','Noyabr','Dekabr'];
 const KEY='qazo_v1';
-const SB_URL='https://slwmapxvmzzajdjebrcv.supabase.co',SB_KEY=''; // Supabase: Project URL va anon key shu yerga yoziladi
+const SB_URL='https://slwmapxvmzzajdjebrcv.supabase.co',SB_KEY=''||(()=>{try{return localStorage.getItem('qazo_sbkey')||''}catch(e){return ''}})(); // Supabase: Project URL va anon key shu yerga yoziladi
 const CLOUD=!!(SB_URL&&SB_KEY);
 let AUTH=null,sync='',pt;try{AUTH=JSON.parse(localStorage.getItem('qazo_auth'))}catch(e){}
 async function sb(path,o={},tk){
@@ -172,7 +172,7 @@ function setup(){
   <div class="hint">Odatda erkak uchun 15, ayol uchun 9 yosh olinadi. Kerak bo'lsa o'zgartiring.</div>
   <label>Namozni muntazam o'qiy boshlagan sana</label><input type="date" id="start" value="${d.start||''}" max="${today}">
   ${d.g==='f'?`<label>Oyiga hayz kunlari (qazo hisobidan chiqariladi)</label><input type="number" id="haid" min="0" max="15" value="${d.haid||0}"><div class="hint">Hayz kunlari namoz o'qilmaydi va qazo bo'lmaydi. Bilmasangiz 0 qoldiring.</div>`:''}
-  <button class="btn g" onclick="doCalc()">Hisoblash</button>${r}</div>`;
+  <button class="btn g" onclick="doCalc()">Hisoblash</button>${r}</div>${!CLOUD?`<button class="btn g" onclick="askKey()">Email bilan kirish</button>`:''}`;
 }
 function doCalc(){
   const g=draft.g,birth=document.getElementById('birth').value,start=document.getElementById('start').value;
@@ -234,16 +234,34 @@ function planRes(v){
 }
 function calcPlan(v){pl=v;document.getElementById('pr').innerHTML=planRes(v)}
 function setPl(n){document.getElementById('pn').value=n;calcPlan(n)}
+let pm='all',pe={};
+const ymd=days=>[Math.floor(days/365)&&Math.floor(days/365)+' yil',Math.floor(days%365/30)&&Math.floor(days%365/30)+' oy',days%365%30&&days%365%30+' kun'].filter(Boolean).join(' ');
+function eachData(){return P.map(p=>{const l=left(p),n=Math.floor(+pe[p])||0;return {p,l,n,d:!l?0:n>0?Math.ceil(l/n):null}})}
+function eachRes(){
+  const r=eachData();
+  if(!r.some(x=>x.l))return `<div class="res">Qazo qolmagan. Alhamdulillah!</div>`;
+  const ds=r.filter(x=>x.d).map(x=>x.d);
+  if(!ds.length)return `<div class="hint">Har bir vaqt uchun kuniga nechta o'qishingizni yozing.</div>`;
+  const days=Math.max(...ds),e=new Date();e.setDate(e.getDate()+days-1);
+  const miss=r.filter(x=>x.l&&x.d===null).length;
+  return `<div class="res"><div class="hint" style="margin:0 0 4px">Hammasi tugashi uchun</div><b>${days.toLocaleString('uz')} kun</b><div style="margin-top:4px">${ymd(days)}</div><div class="hint">Tugash sanasi: ${fd(e)}</div>${miss?`<div class="hint">${miss} ta vaqt kiritilmadi, hisobga olinmadi</div>`:''}</div>`;
+}
+function eachList(){return `<h2>Vaqtlar bo'yicha</h2>`+eachData().map(x=>`<div class="row"><div class="n"><b>${x.p}</b><span>${x.l.toLocaleString('uz')} ta qoldi</span></div><b style="font-family:Georgia,serif">${x.d===null?'—':x.d.toLocaleString('uz')+' kun'}</b></div>`).join('')}
+function upE(){document.getElementById('pr').innerHTML=eachRes();document.getElementById('pl').innerHTML=eachList()}
 function plan(){
   const rem=P.reduce((a,p)=>a+left(p),0);
+  const tg=`<div class="seg" style="margin-bottom:6px"><button class="${pm==='all'?'on':''}" onclick="pm='all';render()">Jami</button><button class="${pm==='each'?'on':''}" onclick="pm='each';render()">Har bir vaqtdan</button></div>`;
+  const head=`<h1>Hisoblagich</h1><p class="sub">Kuniga nechta qazo o'qisangiz, qachon tugashini ko'ring.</p>`;
+  if(pm==='each')return head+`<div class="cols"><div class="card a">${tg}<label>Kuniga har bir vaqtdan nechta o'qiysiz?</label>${P.map(p=>`<div class="row"><div class="n"><b>${p}</b><span>${left(p).toLocaleString('uz')} ta qoldi</span></div><input type="number" min="0" inputmode="numeric" style="width:90px" placeholder="0" value="${pe[p]||''}" oninput="pe['${p}']=this.value;upE()"></div>`).join('')}<div id="pr">${eachRes()}</div></div><div class="card b" id="pl">${eachList()}</div></div>`;
   const rows=[3,5,10,20,30,50,100].map(n=>{const d=Math.ceil(rem/n),e=new Date();e.setDate(e.getDate()+d-1);return `<div class="row" style="cursor:pointer" onclick="setPl(${n})"><div class="n"><b>Kuniga ${n} ta</b><span>${fd(e)} gacha</span></div><b style="font-family:Georgia,serif">${rem?d.toLocaleString('uz'):0} kun</b></div>`}).join('');
-  return `<h1>Hisoblagich</h1><p class="sub">Kuniga nechta qazo o'qisangiz, qachon tugashini ko'ring.</p><div class="cols">
-  <div class="card a"><div class="hint" style="margin:0 0 4px">Hozir qolgan qazo</div><div style="font:600 34px Georgia,serif;color:var(--ac)">${rem.toLocaleString('uz')} ta</div>
-  <label>Bir kunda nechta qazo namoz o'qiysiz?</label><input id="pn" type="number" min="1" inputmode="numeric" placeholder="Masalan: 4" value="${pl}" oninput="calcPlan(this.value)">
+  return head+`<div class="cols"><div class="card a">${tg}<div class="hint" style="margin:8px 0 4px">Hozir qolgan qazo</div><div style="font:600 34px Georgia,serif;color:var(--ac)">${rem.toLocaleString('uz')} ta</div>
+  <label>Bir kunda jami nechta qazo namoz o'qiysiz?</label><input id="pn" type="number" min="1" inputmode="numeric" placeholder="Masalan: 4" value="${pl}" oninput="calcPlan(this.value)">
   <div class="seg" style="margin-top:10px;flex-wrap:wrap">${[3,6,12,18].map(n=>`<button onclick="setPl(${n})">${n}</button>`).join('')}</div>
   <div id="pr">${planRes(pl)}</div></div>
   <div class="card b"><h2>Taqqoslash</h2>${rows}</div></div>`;
 }
+function setKey(){const v=document.getElementById('ky').value.trim();if(v.length<20){alert("Kalit noto'g'ri ko'rinadi");return}localStorage.setItem('qazo_sbkey',v);location.reload()}
+function askKey(){const v=(prompt("Supabase anon public key ni kiriting")||'').trim();if(v.length<20)return;localStorage.setItem('qazo_sbkey',v);location.reload()}
 function settings(){
   const e=ed;
   return `<h1>Sozlamalar</h1><p class="sub">Ma'lumotlar shu qurilma brauzerida saqlanadi.</p><div class="cols"><div class="a"><div class="card"><h2>Mening ma'lumotlarim</h2>
@@ -254,7 +272,7 @@ function settings(){
   ${e.g==='f'?`<label>Oyiga hayz kunlari</label><input type="number" min="0" max="15" value="${e.haid}" onchange="ed.haid=this.value">`:''}
   <div class="hint">Saqlasangiz qazo soni qayta hisoblanadi. O'qilgan namozlaringiz o'chmaydi.</div>
   <button class="btn" onclick="saveEd()">Saqlash va qayta hisoblash</button></div></div><div class="b">
-  ${CLOUD&&AUTH?`<div class="card"><h2>Hisob</h2><p class="hint" style="margin-top:0">${AUTH.email}</p><p class="hint" id="sy">${sync}</p><button class="btn g" onclick="if(confirm('Hisobdan chiqasizmi? Bulutdagi nusxa saqlanib qoladi.'))logout()">Chiqish</button></div>`:''}<div class="card"><h2>Zaxira nusxa</h2><p class="hint" style="margin-top:0">Telefonni almashtirsangiz yoki brauzer tozalansa, nusxadan tiklaysiz.</p>
+  ${CLOUD&&AUTH?`<div class="card"><h2>Hisob</h2><p class="hint" style="margin-top:0">${AUTH.email}</p><p class="hint" id="sy">${sync}</p><button class="btn g" onclick="if(confirm('Hisobdan chiqasizmi? Bulutdagi nusxa saqlanib qoladi.'))logout()">Chiqish</button></div>`:''}${!CLOUD?`<div class="card"><h2>Email bilan kirish</h2><p class="hint" style="margin-top:0">Telefon va kompyuterda bir xil ma'lumot uchun Supabase anon public key ni kiriting.</p><input id="ky" placeholder="eyJ... yoki sb_publishable_..."><button class="btn" onclick="setKey()">Ulash</button></div>`:''}<div class="card"><h2>Zaxira nusxa</h2><p class="hint" style="margin-top:0">Telefonni almashtirsangiz yoki brauzer tozalansa, nusxadan tiklaysiz.</p>
   <button class="btn g" onclick="exp()">Nusxani yuklab olish</button>
   <button class="btn g" onclick="document.getElementById('f').click()">Nusxadan tiklash</button><input type="file" id="f" accept=".json" hidden onchange="imp(this)"></div>
   <div class="card"><h2>Ko'rinish</h2><div class="seg"><button onclick="theme('light')">Och</button><button onclick="theme('dark')">Qorong'u</button></div></div>
