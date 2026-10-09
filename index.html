@@ -204,11 +204,19 @@ function cal(){
     cells+=`<button class="d ${c>=6?'full':c?'has':''} ${k===today?'today':''} ${k===sel?'sel':''}" onclick="sel='${k}';render()">${d}<small>${c||''}</small></button>`;
   }
   const sd=new Date(sel+'T00:00');
+  const pre=y+'-'+pad(m+1)+'-',mk=Object.keys(S.log).filter(k=>k.startsWith(pre));
+  const per=P.map(p=>mk.reduce((a,k)=>a+(S.log[k][p]||0),0));
+  const best=mk.reduce((b,k)=>dayN(k)>b.n?{k,n:dayN(k)}:b,{k:'',n:0});
+  let st=0;const d0=new Date();if(!dayN(today))d0.setDate(d0.getDate()-1);
+  while(dayN(fmt(d0))>0){st++;d0.setDate(d0.getDate()-1)}
+  const num=v=>`<b style="font-family:Georgia,serif;font-size:18px">${v}</b>`;
+  const rp=`<div class="card"><h2>${MON[m]} hisoboti</h2>${P.map((p,i)=>`<div class="row"><div class="n"><b>${p}</b></div>${num(per[i])}</div>`).join('')}<div class="row"><div class="n"><b>Eng ko'p o'qilgan kun</b><span>${best.n?(+best.k.slice(8))+' '+MON[m]:'—'}</span></div>${num(best.n)}</div><div class="row"><div class="n"><b>Ketma-ket kunlar</b><span>har kuni o'qigan kunlaringiz</span></div>${num(st)}</div></div>`;
+  const edit=sel!==today?`<div class="card"><h2>${sd.getDate()} ${MON[sd.getMonth()]} · ${dayN(sel)} ta</h2>${steppers(sel)}</div>`:`<p class="hint" style="margin:0 4px 12px">Bugungi namozlarni Asosiy sahifada belgilang. Esdan chiqqan kunni belgilash uchun kalendarda o'sha kunni bosing.</p>`;
   return `<h1>Kalendar</h1><p class="sub">Kunni bosing va o'qilgan namozlarni belgilang.</p>
   <div class="cols"><div class="stats a"><div><b>${mt}</b><span>${MON[m]}da o'qilgan</span></div><div><b>${md}</b><span>faol kun</span></div></div>
   <div class="card c"><div class="mh"><button onclick="cm=new Date(${y},${m-1},1);render()" aria-label="Oldingi oy">‹</button><h2 style="margin:0">${MON[m]} ${y}</h2><button onclick="cm=new Date(${y},${m+1},1);render()" aria-label="Keyingi oy">›</button></div>
   <div class="grid">${['Du','Se','Ch','Pa','Ju','Sh','Ya'].map(x=>`<div class="dh">${x}</div>`).join('')}${cells}</div></div>
-  <div class="card b"><h2>${sd.getDate()} ${MON[sd.getMonth()]} ${sd.getFullYear()} · ${dayN(sel)} ta</h2>${steppers(sel)}</div></div>`;
+  <div class="b">${edit}${rp}</div></div>`;
 }
 let ed=null;
 function go(t){tab=t;if(t==='set')ed={g:S.g,birth:S.birth,age:S.age,start:S.start,haid:S.haid||0};render();scrollTo(0,0)}
@@ -247,12 +255,13 @@ function eachRes(){
   return `<div class="res"><div class="hint" style="margin:0 0 4px">Hammasi tugashi uchun</div><b>${days.toLocaleString('uz')} kun</b><div style="margin-top:4px">${ymd(days)}</div><div class="hint">Tugash sanasi: ${fd(e)}</div>${miss?`<div class="hint">${miss} ta vaqt kiritilmadi, hisobga olinmadi</div>`:''}</div>`;
 }
 function eachList(){return `<h2>Vaqtlar bo'yicha</h2>`+eachData().map(x=>`<div class="row"><div class="n"><b>${x.p}</b><span>${x.l.toLocaleString('uz')} ta qoldi</span></div><b style="font-family:Georgia,serif">${x.d===null?'—':x.d.toLocaleString('uz')+' kun'}</b></div>`).join('')}
+function setAll(v){P.forEach(p=>pe[p]=v);document.querySelectorAll('.pi').forEach(i=>i.value=v);upE()}
 function upE(){document.getElementById('pr').innerHTML=eachRes();document.getElementById('pl').innerHTML=eachList()}
 function plan(){
   const rem=P.reduce((a,p)=>a+left(p),0);
   const tg=`<div class="seg" style="margin-bottom:6px"><button class="${pm==='all'?'on':''}" onclick="pm='all';render()">Jami</button><button class="${pm==='each'?'on':''}" onclick="pm='each';render()">Har bir vaqtdan</button></div>`;
   const head=`<h1>Hisoblagich</h1><p class="sub">Kuniga nechta qazo o'qisangiz, qachon tugashini ko'ring.</p>`;
-  if(pm==='each')return head+`<div class="cols"><div class="card a">${tg}<label>Kuniga har bir vaqtdan nechta o'qiysiz?</label>${P.map(p=>`<div class="row"><div class="n"><b>${p}</b><span>${left(p).toLocaleString('uz')} ta qoldi</span></div><input type="number" min="0" inputmode="numeric" style="width:90px" placeholder="0" value="${pe[p]||''}" oninput="pe['${p}']=this.value;upE()"></div>`).join('')}<div id="pr">${eachRes()}</div></div><div class="card b" id="pl">${eachList()}</div></div>`;
+  if(pm==='each')return head+`<div class="cols"><div class="card a">${tg}<label>Kuniga har bir vaqtdan nechta o'qiysiz?</label><div class="row"><div class="n"><b>Hammasiga bir xil</b><span>hamma vaqtga bir son</span></div><input type="number" min="0" inputmode="numeric" style="width:90px" placeholder="0" oninput="setAll(this.value)"></div>${P.map(p=>`<div class="row"><div class="n"><b>${p}</b><span>${left(p).toLocaleString('uz')} ta qoldi</span></div><input type="number" min="0" inputmode="numeric" class="pi" style="width:90px" placeholder="0" value="${pe[p]||''}" oninput="pe['${p}']=this.value;upE()"></div>`).join('')}<div id="pr">${eachRes()}</div></div><div class="card b" id="pl">${eachList()}</div></div>`;
   const rows=[3,5,10,20,30,50,100].map(n=>{const d=Math.ceil(rem/n),e=new Date();e.setDate(e.getDate()+d-1);return `<div class="row" style="cursor:pointer" onclick="setPl(${n})"><div class="n"><b>Kuniga ${n} ta</b><span>${fd(e)} gacha</span></div><b style="font-family:Georgia,serif">${rem?d.toLocaleString('uz'):0} kun</b></div>`}).join('');
   return head+`<div class="cols"><div class="card a">${tg}<div class="hint" style="margin:8px 0 4px">Hozir qolgan qazo</div><div style="font:600 34px Georgia,serif;color:var(--ac)">${rem.toLocaleString('uz')} ta</div>
   <label>Bir kunda jami nechta qazo namoz o'qiysiz?</label><input id="pn" type="number" min="1" inputmode="numeric" placeholder="Masalan: 4" value="${pl}" oninput="calcPlan(this.value)">
