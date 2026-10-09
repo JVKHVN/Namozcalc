@@ -88,7 +88,7 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid 
 const P=['Bomdod','Peshin','Asr','Shom','Xufton','Vitr'];
 const MON=['Yanvar','Fevral','Mart','Aprel','May','Iyun','Iyul','Avgust','Sentyabr','Oktyabr','Noyabr','Dekabr'];
 const KEY='qazo_v1';
-const SB_URL='',SB_KEY=''; // Supabase: Project URL va anon key shu yerga yoziladi
+const SB_URL='https://slwmapxvmzzajdjebrcv.supabase.co',SB_KEY=''; // Supabase: Project URL va anon key shu yerga yoziladi
 const CLOUD=!!(SB_URL&&SB_KEY);
 let AUTH=null,sync='',pt;try{AUTH=JSON.parse(localStorage.getItem('qazo_auth'))}catch(e){}
 async function sb(path,o={},tk){
@@ -221,6 +221,29 @@ function saveEd(){
   P.forEach(p=>S.total[p]=t);save();render();
   alert("Saqlandi. Har bir vaqt uchun jami qazo: "+t.toLocaleString('uz')+" ta. O'qilganlar saqlanib qoldi.");
 }
+let pl='';
+const fd=d=>d.getDate()+' '+MON[d.getMonth()]+' '+d.getFullYear();
+function planRes(v){
+  const n=Math.floor(+v),rem=P.reduce((a,p)=>a+left(p),0);
+  if(!rem)return '<div class="res">Qazo qolmagan. Alhamdulillah!</div>';
+  if(!(n>0))return '<div class="hint">Kuniga nechta namoz o\'qiy olishingizni yozing.</div>';
+  const days=Math.ceil(rem/n),e=new Date();e.setDate(e.getDate()+days-1);
+  const y=Math.floor(days/365),m=Math.floor(days%365/30),d=days%365%30;
+  const t=[y&&y+' yil',m&&m+' oy',d&&d+' kun'].filter(Boolean).join(' ');
+  return `<div class="res"><div class="hint" style="margin:0 0 4px">Kuniga ${n} ta o'qisangiz</div><b>${days.toLocaleString('uz')} kun</b><div style="margin-top:4px">${t}</div><div class="hint">Tugash sanasi: ${fd(e)}</div></div>`;
+}
+function calcPlan(v){pl=v;document.getElementById('pr').innerHTML=planRes(v)}
+function setPl(n){document.getElementById('pn').value=n;calcPlan(n)}
+function plan(){
+  const rem=P.reduce((a,p)=>a+left(p),0);
+  const rows=[3,5,10,20,30,50,100].map(n=>{const d=Math.ceil(rem/n),e=new Date();e.setDate(e.getDate()+d-1);return `<div class="row" style="cursor:pointer" onclick="setPl(${n})"><div class="n"><b>Kuniga ${n} ta</b><span>${fd(e)} gacha</span></div><b style="font-family:Georgia,serif">${rem?d.toLocaleString('uz'):0} kun</b></div>`}).join('');
+  return `<h1>Hisoblagich</h1><p class="sub">Kuniga nechta qazo o'qisangiz, qachon tugashini ko'ring.</p><div class="cols">
+  <div class="card a"><div class="hint" style="margin:0 0 4px">Hozir qolgan qazo</div><div style="font:600 34px Georgia,serif;color:var(--ac)">${rem.toLocaleString('uz')} ta</div>
+  <label>Bir kunda nechta qazo namoz o'qiysiz?</label><input id="pn" type="number" min="1" inputmode="numeric" placeholder="Masalan: 4" value="${pl}" oninput="calcPlan(this.value)">
+  <div class="seg" style="margin-top:10px;flex-wrap:wrap">${[3,6,12,18].map(n=>`<button onclick="setPl(${n})">${n}</button>`).join('')}</div>
+  <div id="pr">${planRes(pl)}</div></div>
+  <div class="card b"><h2>Taqqoslash</h2>${rows}</div></div>`;
+}
 function settings(){
   const e=ed;
   return `<h1>Sozlamalar</h1><p class="sub">Ma'lumotlar shu qurilma brauzerida saqlanadi.</p><div class="cols"><div class="a"><div class="card"><h2>Mening ma'lumotlarim</h2>
@@ -246,8 +269,8 @@ function render(){
   if(CLOUD&&!AUTH){app.innerHTML=authView();nav.style.display='none';return}
   if(!S){app.innerHTML=setup();nav.style.display='none';return}
   nav.style.display='flex';
-  app.innerHTML=tab==='home'?home():tab==='cal'?cal():settings();
-  nav.innerHTML=[['home','◉','Asosiy'],['cal','▦','Kalendar'],['set','⚙','Sozlamalar']].map(([t,i,l])=>`<button class="${tab===t?'on':''}" onclick="go('${t}')"><b>${i}</b>${l}</button>`).join('');
+  app.innerHTML=tab==='home'?home():tab==='cal'?cal():tab==='plan'?plan():settings();
+  nav.innerHTML=[['home','◉','Asosiy'],['cal','▦','Kalendar'],['plan','◔','Hisoblagich'],['set','⚙','Sozlamalar']].map(([t,i,l])=>`<button class="${tab===t?'on':''}" onclick="go('${t}')"><b>${i}</b>${l}</button>`).join('');
 }
 render();refresh();
 </script>
