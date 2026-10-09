@@ -92,7 +92,9 @@ let S=null,tab='home',cm=new Date(),sel=null,draft={g:'m',age:15};
 try{S=JSON.parse(localStorage.getItem(KEY))}catch(e){}
 const pad=n=>String(n).padStart(2,'0');
 const fmt=d=>d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
-const today=fmt(new Date());sel=today;
+let today=fmt(new Date());sel=today;
+function tick(){const t=fmt(new Date());if(t===today)return;if(sel===today)sel=t;today=t;cm=new Date();if(S&&tab!=='set')render()}
+setInterval(tick,20000);document.addEventListener('visibilitychange',tick);window.addEventListener('focus',tick);
 function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
 function calc(g,birth,start,age,haid){
   const b=new Date(birth),s=new Date(start);
@@ -144,9 +146,9 @@ function confirmSetup(){
 function home(){
   const tot=P.reduce((a,p)=>a+S.total[p],0),dn=P.reduce((a,p)=>a+done(p),0),rem=tot-dn;
   const pct=tot?Math.round(dn/tot*100):100;
-  return `<h1>Qazo hisobi</h1><p class="sub">${new Date().getDate()} ${MON[new Date().getMonth()]}</p>
+  return `<h1>Qazo hisobi</h1><p class="sub">${new Date().getFullYear()}-yil</p>
   <div class="cols"><div class="card hero a"><div class="l">Qolgan qazo namozlar</div><div class="big">${rem.toLocaleString('uz')}</div><div class="l">${dn.toLocaleString('uz')} ta o'qilgan · ${pct}%</div><div class="bar"><i style="width:${pct}%"></i></div></div>
-  <div class="card b"><h2>Bugun o'qiganlarim</h2>${steppers(today)}</div>
+  <div class="card b"><h2>Bugun, ${new Date().getDate()} ${MON[new Date().getMonth()]}</h2><p class="sub" style="margin:-6px 0 4px">${dayN(today)?`Bugun jami ${dayN(today)} ta o'qildi`:"Bugun hali o'qilmagan"}</p>${steppers(today)}</div>
   <div class="card c"><h2>Vaqtlar bo'yicha</h2>${P.map(p=>{const t=S.total[p],pc=t?Math.round(done(p)/t*100):100;return `<div class="row"><div class="n"><b>${p}</b><span>${left(p).toLocaleString('uz')} ta qoldi</span><div class="mini"><i style="width:${pc}%"></i></div></div><span>${pc}%</span></div>`}).join('')}</div></div>`;
 }
 function cal(){
