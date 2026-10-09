@@ -64,6 +64,20 @@ nav button.on{color:var(--ac);font-weight:600}
 .hint{font-size:13px;color:var(--mut);margin-top:6px}
 .res{background:var(--ac2);border-radius:14px;padding:14px;margin-top:14px;text-align:center}
 .res b{font:600 30px Georgia,serif;color:var(--ac)}
+.cols .b{}
+@media(min-width:900px){
+body{padding:0 0 0 230px}
+.wrap{max-width:1040px;padding:30px 36px}
+.cols{display:grid;grid-template-columns:1fr 1fr;gap:0 20px;align-items:start}
+.cols>.a,.cols>.c{grid-column:1}
+.cols>.b{grid-column:2;grid-row:1/3}
+.hero .big{font-size:68px}
+nav{top:0;bottom:auto;right:auto;width:230px;flex-direction:column;border-top:0;border-right:1px solid var(--line);padding:28px 14px;gap:4px;justify-content:flex-start}
+nav button{display:flex;align-items:center;gap:12px;text-align:left;padding:13px 16px;border-radius:12px;font-size:15px}
+nav button b{display:inline;font-size:18px;width:22px}
+nav button.on{background:var(--ac2)}
+nav:before{content:"Qazo hisobi";font:600 20px Georgia,serif;padding:4px 16px 22px;color:var(--ink)}
+}
 button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
 </style>
 </head>
@@ -131,9 +145,9 @@ function home(){
   const tot=P.reduce((a,p)=>a+S.total[p],0),dn=P.reduce((a,p)=>a+done(p),0),rem=tot-dn;
   const pct=tot?Math.round(dn/tot*100):100;
   return `<h1>Qazo hisobi</h1><p class="sub">${new Date().getDate()} ${MON[new Date().getMonth()]}</p>
-  <div class="card hero"><div class="l">Qolgan qazo namozlar</div><div class="big">${rem.toLocaleString('uz')}</div><div class="l">${dn.toLocaleString('uz')} ta o'qilgan · ${pct}%</div><div class="bar"><i style="width:${pct}%"></i></div></div>
-  <div class="card"><h2>Bugun o'qiganlarim</h2>${steppers(today)}</div>
-  <div class="card"><h2>Vaqtlar bo'yicha</h2>${P.map(p=>{const t=S.total[p],pc=t?Math.round(done(p)/t*100):100;return `<div class="row"><div class="n"><b>${p}</b><span>${left(p).toLocaleString('uz')} ta qoldi</span><div class="mini"><i style="width:${pc}%"></i></div></div><span>${pc}%</span></div>`}).join('')}</div>`;
+  <div class="cols"><div class="card hero a"><div class="l">Qolgan qazo namozlar</div><div class="big">${rem.toLocaleString('uz')}</div><div class="l">${dn.toLocaleString('uz')} ta o'qilgan · ${pct}%</div><div class="bar"><i style="width:${pct}%"></i></div></div>
+  <div class="card b"><h2>Bugun o'qiganlarim</h2>${steppers(today)}</div>
+  <div class="card c"><h2>Vaqtlar bo'yicha</h2>${P.map(p=>{const t=S.total[p],pc=t?Math.round(done(p)/t*100):100;return `<div class="row"><div class="n"><b>${p}</b><span>${left(p).toLocaleString('uz')} ta qoldi</span><div class="mini"><i style="width:${pc}%"></i></div></div><span>${pc}%</span></div>`}).join('')}</div></div>`;
 }
 function cal(){
   const y=cm.getFullYear(),m=cm.getMonth(),first=new Date(y,m,1),n=new Date(y,m+1,0).getDate();
@@ -146,18 +160,37 @@ function cal(){
   }
   const sd=new Date(sel+'T00:00');
   return `<h1>Kalendar</h1><p class="sub">Kunni bosing va o'qilgan namozlarni belgilang.</p>
-  <div class="stats"><div><b>${mt}</b><span>${MON[m]}da o'qilgan</span></div><div><b>${md}</b><span>faol kun</span></div></div>
-  <div class="card"><div class="mh"><button onclick="cm=new Date(${y},${m-1},1);render()" aria-label="Oldingi oy">‹</button><h2 style="margin:0">${MON[m]} ${y}</h2><button onclick="cm=new Date(${y},${m+1},1);render()" aria-label="Keyingi oy">›</button></div>
+  <div class="cols"><div class="stats a"><div><b>${mt}</b><span>${MON[m]}da o'qilgan</span></div><div><b>${md}</b><span>faol kun</span></div></div>
+  <div class="card c"><div class="mh"><button onclick="cm=new Date(${y},${m-1},1);render()" aria-label="Oldingi oy">‹</button><h2 style="margin:0">${MON[m]} ${y}</h2><button onclick="cm=new Date(${y},${m+1},1);render()" aria-label="Keyingi oy">›</button></div>
   <div class="grid">${['Du','Se','Ch','Pa','Ju','Sh','Ya'].map(x=>`<div class="dh">${x}</div>`).join('')}${cells}</div></div>
-  <div class="card"><h2>${sd.getDate()} ${MON[sd.getMonth()]} ${sd.getFullYear()} · ${dayN(sel)} ta</h2>${steppers(sel)}</div>`;
+  <div class="card b"><h2>${sd.getDate()} ${MON[sd.getMonth()]} ${sd.getFullYear()} · ${dayN(sel)} ta</h2>${steppers(sel)}</div></div>`;
+}
+let ed=null;
+function go(t){tab=t;if(t==='set')ed={g:S.g,birth:S.birth,age:S.age,start:S.start,haid:S.haid||0};render();scrollTo(0,0)}
+function setG(g){if(ed.age==(ed.g==='m'?15:9))ed.age=g==='m'?15:9;ed.g=g;render()}
+function saveEd(){
+  if(!ed.birth||!ed.start){alert("Sanalarni kiriting");return}
+  if(new Date(ed.start)<=new Date(ed.birth)){alert("Boshlagan sana tug'ilgan sanadan keyin bo'lishi kerak");return}
+  const age=+ed.age,haid=ed.g==='f'?+ed.haid||0:0,t=calc(ed.g,ed.birth,ed.start,age,haid);
+  Object.assign(S,{g:ed.g,birth:ed.birth,start:ed.start,age,haid});
+  P.forEach(p=>S.total[p]=t);save();render();
+  alert("Saqlandi. Har bir vaqt uchun jami qazo: "+t.toLocaleString('uz')+" ta. O'qilganlar saqlanib qoldi.");
 }
 function settings(){
-  return `<h1>Sozlamalar</h1><p class="sub">Ma'lumotlar shu qurilma brauzerida saqlanadi.</p>
+  const e=ed;
+  return `<h1>Sozlamalar</h1><p class="sub">Ma'lumotlar shu qurilma brauzerida saqlanadi.</p><div class="cols"><div class="a"><div class="card"><h2>Mening ma'lumotlarim</h2>
+  <label>Jins</label><div class="seg"><button class="${e.g==='m'?'on':''}" onclick="setG('m')">Erkak</button><button class="${e.g==='f'?'on':''}" onclick="setG('f')">Ayol</button></div>
+  <label>Tug'ilgan sana</label><input type="date" value="${e.birth}" max="${today}" onchange="ed.birth=this.value">
+  <label>Balog'at yoshi</label><input type="number" min="7" max="20" value="${e.age}" onchange="ed.age=this.value">
+  <label>Namozni muntazam o'qiy boshlagan sana</label><input type="date" value="${e.start}" max="${today}" onchange="ed.start=this.value">
+  ${e.g==='f'?`<label>Oyiga hayz kunlari</label><input type="number" min="0" max="15" value="${e.haid}" onchange="ed.haid=this.value">`:''}
+  <div class="hint">Saqlasangiz qazo soni qayta hisoblanadi. O'qilgan namozlaringiz o'chmaydi.</div>
+  <button class="btn" onclick="saveEd()">Saqlash va qayta hisoblash</button></div></div><div class="b">
   <div class="card"><h2>Zaxira nusxa</h2><p class="hint" style="margin-top:0">Telefonni almashtirsangiz yoki brauzer tozalansa, nusxadan tiklaysiz.</p>
   <button class="btn g" onclick="exp()">Nusxani yuklab olish</button>
   <button class="btn g" onclick="document.getElementById('f').click()">Nusxadan tiklash</button><input type="file" id="f" accept=".json" hidden onchange="imp(this)"></div>
   <div class="card"><h2>Ko'rinish</h2><div class="seg"><button onclick="theme('light')">Och</button><button onclick="theme('dark')">Qorong'u</button></div></div>
-  <div class="card"><h2>Qaytadan hisoblash</h2><p class="hint" style="margin-top:0">Barcha belgilangan namozlar o'chadi.</p><button class="btn r" onclick="if(confirm('Hamma ma\\'lumot o\\'chiriladi. Davom etasizmi?')){S=null;localStorage.removeItem(KEY);draft={g:'m',age:15};render()}">Hammasini o'chirish</button></div>`;
+  <div class="card"><h2>Qaytadan hisoblash</h2><p class="hint" style="margin-top:0">Barcha belgilangan namozlar o'chadi.</p><button class="btn r" onclick="if(confirm('Hamma ma\\'lumot o\\'chiriladi. Davom etasizmi?')){S=null;localStorage.removeItem(KEY);draft={g:'m',age:15};render()}">Hammasini o'chirish</button></div></div></div>`;
 }
 function theme(t){document.documentElement.dataset.theme=t;try{localStorage.setItem('qazo_theme',t)}catch(e){}}
 try{const t=localStorage.getItem('qazo_theme');if(t)document.documentElement.dataset.theme=t}catch(e){}
@@ -168,7 +201,7 @@ function render(){
   if(!S){app.innerHTML=setup();nav.style.display='none';return}
   nav.style.display='flex';
   app.innerHTML=tab==='home'?home():tab==='cal'?cal():settings();
-  nav.innerHTML=[['home','◉','Asosiy'],['cal','▦','Kalendar'],['set','⚙','Sozlamalar']].map(([t,i,l])=>`<button class="${tab===t?'on':''}" onclick="tab='${t}';render();scrollTo(0,0)"><b>${i}</b>${l}</button>`).join('');
+  nav.innerHTML=[['home','◉','Asosiy'],['cal','▦','Kalendar'],['set','⚙','Sozlamalar']].map(([t,i,l])=>`<button class="${tab===t?'on':''}" onclick="go('${t}')"><b>${i}</b>${l}</button>`).join('');
 }
 render();
 </script>
