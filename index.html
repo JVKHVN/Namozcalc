@@ -97,7 +97,7 @@ async function sb(path,o={},tk){
   const r=await fetch(SB_URL+path,{method:o.m||'GET',headers:h,body:o.b?JSON.stringify(o.b):undefined});
   const t=await r.text();let j=null;try{j=JSON.parse(t)}catch(e){}
   if(!r.ok){let m=(j&&(j.msg||j.error_description||j.message))||('Xato '+r.status);
-    if(/Invalid login/i.test(m))m="Email yoki parol noto'g'ri";else if(/already registered/i.test(m))m="Bu email ro'yxatdan o'tgan, \"Kirish\" ni bosing";else if(/at least 6/i.test(m))m="Parol kamida 6 belgi bo'lsin";
+    if(/Invalid API key/i.test(m))m="Supabase kaliti noto'g'ri. Pastdagi tugma bilan to'g'ri kalitni kiriting";else if(/Invalid login/i.test(m))m="Email yoki parol noto'g'ri";else if(/already registered/i.test(m))m="Bu email ro'yxatdan o'tgan, \"Kirish\" ni bosing";else if(/at least 6/i.test(m))m="Parol kamida 6 belgi bo'lsin";
     throw new Error(m)}
   return j;
 }
@@ -119,7 +119,7 @@ async function pull(){
 }
 const refresh=()=>pull().then(()=>{if(S&&tab!=='set')render()});
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)refresh()});
-function authView(){return `<h1>Qazo hisobi</h1><p class="sub">Kiring, shunda telefon va kompyuterda bir xil ma'lumot ko'rinadi.</p><div class="card"><label>Email</label><input id="em" type="email" autocomplete="email"><label>Parol (kamida 6 belgi)</label><input id="pw" type="password" autocomplete="current-password"><button class="btn" onclick="authGo('in')">Kirish</button><button class="btn g" onclick="authGo('up')">Ro'yxatdan o'tish</button><p class="hint" id="aerr" style="color:#c0392b"></p></div>`}
+function authView(){return `<h1>Qazo hisobi</h1><p class="sub">Kiring, shunda telefon va kompyuterda bir xil ma'lumot ko'rinadi.</p><div class="card"><label>Email</label><input id="em" type="email" autocomplete="email"><label>Parol (kamida 6 belgi)</label><input id="pw" type="password" autocomplete="current-password"><button class="btn" onclick="authGo('in')">Kirish</button><button class="btn g" onclick="authGo('up')">Ro'yxatdan o'tish</button><p class="hint" id="aerr" style="color:#c0392b"></p><button class="btn g" style="font-size:13px;padding:10px" onclick="askKey()">Supabase kalitini o'zgartirish</button></div>`}
 async function authGo(k){
   const err=m=>document.getElementById('aerr').textContent=m,email=document.getElementById('em').value.trim(),password=document.getElementById('pw').value;
   if(!email||!password){err('Email va parolni kiriting');return}
@@ -260,8 +260,15 @@ function plan(){
   <div id="pr">${planRes(pl)}</div></div>
   <div class="card b"><h2>Taqqoslash</h2>${rows}</div></div>`;
 }
-function setKey(){const v=document.getElementById('ky').value.trim();if(v.length<20){alert("Kalit noto'g'ri ko'rinadi");return}localStorage.setItem('qazo_sbkey',v);location.reload()}
-function askKey(){const v=(prompt("Supabase anon public key ni kiriting")||'').trim();if(v.length<20)return;localStorage.setItem('qazo_sbkey',v);location.reload()}
+function badKey(v){
+  v=v.trim();
+  if(/^sb_secret_/.test(v))return "Bu maxfiy (secret) kalit, uni ishlatmang. Publishable kalit kerak";
+  if(v.startsWith('eyJ')){try{const r=JSON.parse(atob(v.split('.')[1].replace(/-/g,'+').replace(/_/g,'/'))).role;if(r==='service_role')return "Bu service_role kaliti, u maxfiy! Anon kalit kerak";if(r!=='anon')return "Anon kalit kerak"}catch(e){return "Kalit to'liq emas yoki noto'g'ri nusxalangan"}return ''}
+  if(/^sb_publishable_/.test(v))return '';
+  return "Kalit eyJ... yoki sb_publishable_... bilan boshlanishi kerak";
+}
+function setKey(){const v=document.getElementById('ky').value.trim();const b=badKey(v);if(b){alert(b);return}localStorage.setItem('qazo_sbkey',v);location.reload()}
+function askKey(){const v=(prompt("Supabase anon public key ni kiriting")||'').trim();if(!v)return;const b=badKey(v);if(b){alert(b);return}localStorage.setItem('qazo_sbkey',v);location.reload()}
 function settings(){
   const e=ed;
   return `<h1>Sozlamalar</h1><p class="sub">Ma'lumotlar shu qurilma brauzerida saqlanadi.</p><div class="cols"><div class="a"><div class="card"><h2>Mening ma'lumotlarim</h2>
